@@ -1,0 +1,12 @@
+﻿<Application x:Class="Lab1.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Lab1"
+             xmlns:viewmodels="clr-namespace:Lab1.ViewModels"
+             StartupUri="Views/windows/MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <viewmodels:ViewModelLocator x:Key="Locator"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
