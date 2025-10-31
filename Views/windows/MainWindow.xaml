@@ -18,9 +18,11 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <Button Grid.Column="0" Content="Registry and devices" Margin="0" Command="{Binding OpenRegistryAndDeviceControlCommand}"/>
             <Button Grid.Column="1" Content="Communacation" Margin="0" Command="{Binding OpenCommunicationControlCommand}"/>
+            <Button Grid.Column="2" Content="Script exec" Margin="0" Command="{Binding OpenScriptControlCommand}"/>
         </Grid>
        
         <Grid Grid.Row="1" Visibility="{Binding RegistryAndDevicesControlVisibility}" d:Visibility="Collapsed">
@@ -71,7 +73,7 @@
             </GroupBox>
         </Grid>
 
-        <Grid Grid.Row="1" Visibility="{Binding CommunicationControlVisibility}" d:Visibility="Visible">
+        <Grid Grid.Row="1" Visibility="{Binding CommunicationControlVisibility}" d:Visibility="Collapsed">
             <Grid.RowDefinitions>
                 <RowDefinition Height="0.5*"/>
                 <RowDefinition Height="*"/>
@@ -136,5 +138,37 @@
                 </Grid>
             </GroupBox>
         </Grid>
+
+        <Grid Grid.Row="1" Visibility="{Binding ScriptControlVisibility}" d:Visibility="Visible">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="0.2*"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="0.2*"/>
+            </Grid.RowDefinitions>
+            <GroupBox Grid.Column="0" Grid.Row="1" Header="Script editor" Margin="3">
+                <TextBox 
+                    Margin="6" 
+                    Text="{Binding ScriptText}" 
+                    AcceptsReturn="True" 
+                    AcceptsTab="True"
+                    VerticalScrollBarVisibility="Auto" 
+                    HorizontalScrollBarVisibility="Auto"
+                    FontFamily="Consolas" 
+                    FontSize="12"/>
+            </GroupBox>
+
+            <GroupBox Grid.Column="1" Grid.Row="1" Header="Script editor" Margin="3">
+                <TextBlock Margin="6" Text="{Binding LogText}" ScrollViewer.CanContentScroll="True"/>
+            </GroupBox>
+
+            <GroupBox Grid.Column="0" Grid.Row="3" Header="Control panel" Margin="3">
+                <Button Content="Start" Width="100" Height="20" HorizontalAlignment="Left" Command="{Binding StartScriptCommand}"/>
+            </GroupBox>
+        </Grid>
+
     </Grid>
 </Window>

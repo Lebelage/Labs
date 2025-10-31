@@ -1,15 +1,20 @@
 ﻿using Lab1.Commands;
 using Lab1.Core.Device.Interfaces;
+using Lab1.Core.ScriptInterpreter.Interfaces;
+using Lab1.Core.ScriptInterpreter.Services;
+using Lab1.Core.ScriptInterpreter.Utils;
 using Lab1.Infrastructure.enums;
 using Lab1.Services;
 using Lab1.Services.Interface;
 using Lab1.ViewModels.Base;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.CodeDom.Compiler;
 using System.Collections.ObjectModel;
 using System.IO.Packaging;
 using System.IO.Ports;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Windows.ApplicationModel.CommunicationBlocking;
@@ -20,6 +25,10 @@ namespace Lab1.ViewModels
     {
         #region Fields
         private readonly string __UNDEFINED = "Undefined";
+
+        private ICommandExecutor _commandExecutor;
+        private IScriptParser _scriptParser;
+
         #region DriverName : string
         private string _DriverName = "FTDIBUS";
         public string DriverName { get => _DriverName; set => Set(ref _DriverName, value); }
@@ -53,6 +62,11 @@ namespace Lab1.ViewModels
         #region CommunicationControlVisibility : Visibility
         private Visibility _CommunicationControlVisibility;
         public Visibility CommunicationControlVisibility { get => _CommunicationControlVisibility; set => Set(ref _CommunicationControlVisibility, value); }
+        #endregion
+
+        #region ScriptControlVisibility : Visibility
+        private Visibility _ScriptControlVisibility;
+        public Visibility ScriptControlVisibility { get => _ScriptControlVisibility; set => Set(ref _ScriptControlVisibility, value); }
         #endregion
 
         #region COMPorts : ObservableCollection<string> - Available computer COM ports list
@@ -170,7 +184,17 @@ namespace Lab1.ViewModels
         public int ResistorIndex { get => _ResistorIndex; set => Set(ref _ResistorIndex, value); }
         #endregion
 
+        #region ScriptText : string
+        private string _ScriptText;
+        public string ScriptText { get => _ScriptText; set => Set(ref _ScriptText, value); }
+        #endregion
 
+        #region LogText : string
+        private string _LogText;
+        public string LogText { get => _LogText; set => Set(ref _LogText, value); }
+        #endregion
+
+        public bool IsExecuting { get; private set; }
         private bool IsConnected = false;
         #endregion
 
@@ -187,7 +211,8 @@ namespace Lab1.ViewModels
         private bool CanFindRegPathCommandExecute(object p) => true;
         private void OnFindRegPathCommandExecuted(object p) 
         {
-            App.Services.GetRequiredService<IConnection>().SetCuvetteAndResistorAsync(1, 1);
+            //App.Services.GetRequiredService<IConnection>().SetCuvetteAndResistorAsync(1, 1);
+            App.Services.GetRequiredService<IDllWorkerService>().CallSum("C:\\Users\\neotro\\source\\repos\\Labs\\sum.dll", "sum", 2, 9);
             if (DriverName is not null) 
             {
                 DriverPath = findRegistryKey.Find(DriverName);
@@ -196,7 +221,6 @@ namespace Lab1.ViewModels
 
             DriverPath = __UNDEFINED;
 
-           
         }
         #endregion
 
@@ -233,6 +257,12 @@ namespace Lab1.ViewModels
         public ICommand OpenRegistryAndDeviceControlCommand { get; }
         private bool CanOpenRegistryAndDeviceControlCommandExecute(object p) => true;
         private void OnOpenRegistryAndDeviceControlCommandExecuted(object p) => ChangeControl(ControlsType.RegistryAndDevices);
+        #endregion
+
+        #region (Command) : OpenScriptControlCommand
+        public ICommand OpenScriptControlCommand { get; }
+        private bool CanOpenScriptControlCommandExecute(object p) => true;
+        private void OnOpenScriptControlCommandExecuted(object p) => ChangeControl(ControlsType.Script);
         #endregion
 
         #region (Command) : OpenCommunicationControlCommand
@@ -272,21 +302,53 @@ namespace Lab1.ViewModels
             }
         }
         #endregion
+
+        #region (Command) : StartScriptCommand
+        public ICommand StartScriptCommand { get; }
+        
+
+        private bool CanStartScriptCommandExecute(object p) => true;
+        private void OnStartScriptCommandExecuted(object p)
+        {
+            Task.Run(() => StartScript());
+        }
+        #endregion
+
         #endregion
 
 
         #region Methods
         private void ChangeControl(ControlsType sender) 
         {
-            if(sender == ControlsType.RegistryAndDevices) 
+            CommunicationControlVisibility = Visibility.Collapsed;
+            RegistryAndDevicesControlVisibility = Visibility.Collapsed;
+            ScriptControlVisibility = Visibility.Collapsed;
+
+            if (sender == ControlsType.RegistryAndDevices) 
             {
                 RegistryAndDevicesControlVisibility = Visibility.Visible;
-                CommunicationControlVisibility = Visibility.Collapsed;
             }
             else if(sender == ControlsType.Communication) 
             {
-                RegistryAndDevicesControlVisibility = Visibility.Collapsed;
                 CommunicationControlVisibility = Visibility.Visible;
+            }
+            else if(sender == ControlsType.Script) 
+            {
+                ScriptControlVisibility= Visibility.Visible;
+            }
+        }
+
+        private void StartScript()
+        {
+            LogText = "Сценарий интерпретирован успешно\n\n";
+            try
+            {
+                var (cmds0, cmds1, cmds2, lines) = _scriptParser.Parse(ScriptText);
+                _commandExecutor.Execute(cmds0, cmds1, cmds2, lines);
+            }
+            catch (Exception ex)
+            {
+                LogText += $"ОШИБКА: {ex.Message}\n";
             }
         }
         #endregion
@@ -304,17 +366,25 @@ namespace Lab1.ViewModels
             findRegistryKey = App.Services.GetRequiredService<IFindRegistryKey>();
             usbDeviceFinder = App.Services.GetRequiredService<IUSBDeviceFinder>();
             communication = App.Services.GetRequiredService<IConnection>();
+  
+            _commandExecutor = new CommandExecutor();
+            _scriptParser = new ScriptParser();
+
+            Logger.LogMessage += (s, msg) => LogText += msg + "\n";
 
             RegistryAndDevicesControlVisibility = Visibility.Visible;
             CommunicationControlVisibility = Visibility.Collapsed;
+            ScriptControlVisibility = Visibility.Collapsed;
 
             FindRegPathCommand = new LambdaCommand(OnFindRegPathCommandExecuted, CanFindRegPathCommandExecute);
             FindDevicesCommand = new LambdaCommand(OnFindDevicesCommandExecuted, CanFindDevicesCommandExecute);
             ConnectionCommand = new LambdaCommand(OnConnectionCommandExecuted, CanConnectionCommandExecute);
             SendSetRequestCommand = new LambdaCommand(OnSendSetRequestCommandExecuted, CanSendSetRequestCommandExecute);
+            StartScriptCommand = new LambdaCommand(OnStartScriptCommandExecuted, CanStartScriptCommandExecute);
 
             OpenCommunicationControlCommand = new LambdaCommand(OnOpenCommunicationControlCommandExecuted, CanOpenCommunicationControlCommandExecute);
             OpenRegistryAndDeviceControlCommand = new LambdaCommand(OnOpenRegistryAndDeviceControlCommandExecuted, CanOpenRegistryAndDeviceControlCommandExecute);
+            OpenScriptControlCommand = new LambdaCommand(OnOpenScriptControlCommandExecuted, CanOpenScriptControlCommandExecute);
 
             communication.ConnectionChanged += OnConnectionChanged;
         }

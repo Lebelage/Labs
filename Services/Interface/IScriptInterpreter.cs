@@ -4,12 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Lab1.Infrastructure.enums
+namespace Lab1.Services.Interface
 {
-    internal enum ControlsType
+    internal interface IScriptInterpreter
     {
-        RegistryAndDevices,
-        Communication,
-        Script
+
     }
 }
