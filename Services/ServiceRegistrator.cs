@@ -17,6 +17,7 @@ namespace Lab1.Services
             .AddSingleton<IFindRegistryKey, FindRegKeyService>()
             .AddSingleton<IUSBDeviceFinder, FindUSBDevicesService>()
             .AddSingleton<IDllWorkerService, DllWorkerService>()
+            .AddSingleton<IMathLink, MathLinkService>()
             ;
 
     }

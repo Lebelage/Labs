@@ -10,6 +10,8 @@ namespace Lab1.Infrastructure.enums
     {
         RegistryAndDevices,
         Communication,
-        Script
+        Script,
+        DLLWorker,
+        MathLink
     }
 }

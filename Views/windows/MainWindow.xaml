@@ -4,11 +4,11 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm ="clr-namespace:Lab1.ViewModels"
+        xmlns:plots="clr-namespace:Lab1.Views.controls"
         xmlns:local="clr-namespace:Lab1"
         mc:Ignorable="d"
         DataContext="{Binding MainWindowVM,Source={StaticResource Locator}}"
         Title="MainWindow" Height="450" Width="800">
-
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="0.07*"/>
@@ -19,12 +19,16 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <Button Grid.Column="0" Content="Registry and devices" Margin="0" Command="{Binding OpenRegistryAndDeviceControlCommand}"/>
             <Button Grid.Column="1" Content="Communacation" Margin="0" Command="{Binding OpenCommunicationControlCommand}"/>
             <Button Grid.Column="2" Content="Script exec" Margin="0" Command="{Binding OpenScriptControlCommand}"/>
+            <Button Grid.Column="3" Content="DLL worker" Margin="0" Command="{Binding OpenDllWorkerControlCommand}"/>
+            <Button Grid.Column="4" Content="Math Link" Margin="0" Command="{Binding OpenMathLinkCommand}"/>
         </Grid>
-       
+
         <Grid Grid.Row="1" Visibility="{Binding RegistryAndDevicesControlVisibility}" d:Visibility="Collapsed">
             <Grid.RowDefinitions>
                 <RowDefinition Height="0.2*"/>
@@ -132,23 +136,24 @@
                     <TextBox Grid.Row="0" Grid.Column="1" Width="70" Height="20" Margin="3" Text="{Binding CuvetteNum}"/>
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Resistor index: " Margin="3" VerticalAlignment="Center"/>
                     <TextBox Grid.Row="1" Grid.Column="1" Width="70" Height="20" Margin="3" Text="{Binding ResistorIndex}"/>
-                    
+
 
                     <Button Grid.Row="5" Grid.Column="1" Content="Send" Height="20" Width="70" HorizontalAlignment="Right" VerticalAlignment="Bottom" Command="{Binding SendSetRequestCommand}"/>
                 </Grid>
             </GroupBox>
         </Grid>
 
-        <Grid Grid.Row="1" Visibility="{Binding ScriptControlVisibility}" d:Visibility="Visible">
+        <Grid Grid.Row="1" Visibility="{Binding ScriptControlVisibility}" d:Visibility="Collapsed">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
-                <RowDefinition Height="0.2*"/>
+                <RowDefinition Height="0.01*"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="0.2*"/>
             </Grid.RowDefinitions>
+
             <GroupBox Grid.Column="0" Grid.Row="1" Header="Script editor" Margin="3">
                 <TextBox 
                     Margin="6" 
@@ -161,7 +166,7 @@
                     FontSize="12"/>
             </GroupBox>
 
-            <GroupBox Grid.Column="1" Grid.Row="1" Header="Script editor" Margin="3">
+            <GroupBox Grid.Column="1" Grid.Row="1" Header="Log viewer" Margin="3">
                 <TextBlock Margin="6" Text="{Binding LogText}" ScrollViewer.CanContentScroll="True"/>
             </GroupBox>
 
@@ -170,5 +175,142 @@
             </GroupBox>
         </Grid>
 
+        <Grid Grid.Row="1" Visibility="{Binding DLLWorkerControlVisibility}" d:Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <GroupBox Header="Sum dll" Grid.Column="0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="0.3*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="0.5*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Column="0" Grid.Row="0" Text="Path: " VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1" Grid.Row="0" Height="20" Margin="3" Text="{Binding DllFilePath}"/>
+                    <Button Grid.Column="2" Grid.Row="0" Content="Load" Height="20" Width="80" Margin="3" Command="{Binding LoadSumDLLCommand}"/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="1" Text="Func name: " VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1" Grid.Row="1" Height="20" Margin="3" Text="{Binding FuncName}"/>
+                    <Button Grid.Column="2" Grid.Row="1" Content="Select" Height="20" Width="80" Margin="3" Command="{Binding SelectDllFuncCommand}"/>
+
+                    <Grid Grid.Column="1" Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="0.2*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="0.2*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Height="20" Margin="3" Text="x:"/>
+                        <TextBox Grid.Column="1" Height="20" Margin="3" Text="{Binding DllSumXParam}"/>
+                        <TextBlock Grid.Column="2" Height="20" Margin="3" Text="y:"/>
+                        <TextBox Grid.Column="3" Height="20" Margin="3" Text="{Binding DllSumYParam}"/>
+                    </Grid>
+                    <TextBlock Grid.Column="0" Grid.Row="2" Text="Params: " VerticalAlignment="Center"/>
+                    <Button Grid.Column="2" Grid.Row="2" Content="Call func" Height="20" Width="80" Margin="3" Command="{Binding CallFuncCommand}"/>
+
+                    <TextBlock Grid.Column="0" Grid.Row="3" Text="Result: " VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" Grid.Row="3" Height="20" Margin="3" Text="{Binding DllWorkerServiceResult}"/>
+                </Grid>
+            </GroupBox>
+            <GroupBox Header="Osc dll" Grid.Column="1">
+
+            </GroupBox>
+        </Grid>
+
+        <Grid Grid.Row="1" Visibility="{Binding MathLinkControlVisibility}" d:Visibility="Visible">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0.4*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="30"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0" Orientation="Horizontal">
+                    <Button Content="Select kernel" Height="20" Width="100" Margin="3" Command="{Binding SelectKernelCommand}"/>
+                </StackPanel>
+                <DataGrid Grid.Row="1" ItemsSource="{Binding SignalPoints}"></DataGrid>
+            </Grid>
+
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="0.25*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <GroupBox Header="Signal" Grid.Row="0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Signal: " VerticalAlignment="Center" Grid.Column="0"/>
+                            <TextBox VerticalAlignment="Center" Grid.Column="1" Margin="3" Text="{Binding Equation}"/>
+                        </Grid>
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Text="t0: " Grid.Column="0" VerticalAlignment="Center"/>
+                            <TextBox Text="{Binding T0}" Grid.Column="1" Margin="3" Width="100" HorizontalAlignment="Left"/>
+                            <TextBlock Text="tmax: " Grid.Column="2" VerticalAlignment="Center"/>
+                            <TextBox Text="{Binding Tmax}" Grid.Column="3" Margin="3" Width="100" HorizontalAlignment="Left"/>
+                            <TextBlock Text="dt: " Grid.Column="4" VerticalAlignment="Center"/>
+                            <TextBox Text="{Binding Dt}" Grid.Column="5" Margin="3" Width="100" HorizontalAlignment="Left"/>
+                            <Button Content="Calculate" Grid.Column="6" Margin="3" Width="70" Command="{Binding SolveEquationCommand}"/>
+                        </Grid>
+                    </Grid>
+                </GroupBox>
+
+                <Grid Grid.Row="1">
+                    <GroupBox Header="Graphs">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="auto"/>
+                                <RowDefinition Height="*"/>
+
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Text="Signal" Grid.Row="0" HorizontalAlignment="Center"/>
+                            <plots:SignalPlotControl Grid.Row="1"/>
+                            <TextBlock Text="balba" Grid.Row="2" HorizontalAlignment="Center"/>
+                            <plots:FourierPlotControl Grid.Row="3"/>
+                        </Grid>
+                    </GroupBox>
+                </Grid>
+            </Grid>
+
+        </Grid>
     </Grid>
 </Window>

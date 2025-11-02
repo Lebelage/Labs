@@ -4,20 +4,25 @@ using Lab1.Core.ScriptInterpreter.Interfaces;
 using Lab1.Core.ScriptInterpreter.Services;
 using Lab1.Core.ScriptInterpreter.Utils;
 using Lab1.Infrastructure.enums;
+using Lab1.Model;
 using Lab1.Services;
 using Lab1.Services.Interface;
 using Lab1.ViewModels.Base;
+using Lab1.Views.controls;
 using Microsoft.Extensions.DependencyInjection;
+using ScottPlot.Plottable;
 using System;
 using System.CodeDom.Compiler;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO.Packaging;
 using System.IO.Ports;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
-using Windows.ApplicationModel.CommunicationBlocking;
+
 
 namespace Lab1.ViewModels
 {
@@ -67,6 +72,16 @@ namespace Lab1.ViewModels
         #region ScriptControlVisibility : Visibility
         private Visibility _ScriptControlVisibility;
         public Visibility ScriptControlVisibility { get => _ScriptControlVisibility; set => Set(ref _ScriptControlVisibility, value); }
+        #endregion
+
+        #region DLLWorkerControlVisibility : Visibility
+        private Visibility _DLLWorkerControlVisibility;
+        public Visibility DLLWorkerControlVisibility { get => _DLLWorkerControlVisibility; set => Set(ref _DLLWorkerControlVisibility, value); }
+        #endregion
+
+        #region MathLinkControlVisibility : Visibility
+        private Visibility _MathLinkControlVisibility;
+        public Visibility MathLinkControlVisibility { get => _MathLinkControlVisibility; set => Set(ref _MathLinkControlVisibility, value); }
         #endregion
 
         #region COMPorts : ObservableCollection<string> - Available computer COM ports list
@@ -184,6 +199,31 @@ namespace Lab1.ViewModels
         public int ResistorIndex { get => _ResistorIndex; set => Set(ref _ResistorIndex, value); }
         #endregion
 
+        #region DllFilePath : string
+        private string _DllFilePath;
+        public string DllFilePath { get => _DllFilePath; set => Set(ref _DllFilePath, value); }
+        #endregion
+
+        #region FuncName : string
+        private string _FuncName;
+        public string FuncName { get => _FuncName; set => Set(ref _FuncName, value); }
+        #endregion
+
+        #region DllSumXParam : inst
+        private int _DllSumXParam;
+        public int DllSumXParam { get => _DllSumXParam; set => Set(ref _DllSumXParam, value); }
+        #endregion
+
+        #region DllSumYParam : int
+        private int _DllSumYParam;
+        public int DllSumYParam { get => _DllSumYParam; set => Set(ref _DllSumYParam, value); }
+        #endregion
+
+        #region DllWorkerServiceResult : string
+        private string _DllWorkerServiceResult;
+        public string DllWorkerServiceResult { get => _DllWorkerServiceResult; set => Set(ref _DllWorkerServiceResult, value); }
+        #endregion
+
         #region ScriptText : string
         private string _ScriptText;
         public string ScriptText { get => _ScriptText; set => Set(ref _ScriptText, value); }
@@ -192,6 +232,41 @@ namespace Lab1.ViewModels
         #region LogText : string
         private string _LogText;
         public string LogText { get => _LogText; set => Set(ref _LogText, value); }
+        #endregion
+
+        #region SignalPoints : ObservableCollection<SignalModel>
+        private ObservableCollection<SignalModel> _SignalPoints = new();
+        public ObservableCollection<SignalModel> SignalPoints { get => _SignalPoints; set => Set(ref _SignalPoints, value); }
+        #endregion
+
+        #region Equation : string
+        private string _Equation = "x[t_]:=Exp[-t/20]*(Sin[2Pi*t]+4Sin[2Pi*4t])";
+        public string Equation { get => _Equation; set => Set(ref _Equation, value); }
+        #endregion
+
+        #region T0 : double
+        private double _T0 = 0;
+        public double T0 { get => _T0; set => Set(ref _T0, value); }
+        #endregion
+
+        #region Tmax : double
+        private double _Tmax = 20;
+        public double Tmax { get => _Tmax; set => Set(ref _Tmax, value); }
+        #endregion
+
+        #region Dt : double
+        private double _Dt = 0.1d;
+        public double Dt { get => _Dt; set => Set(ref _Dt, value); }
+        #endregion
+
+        #region SignalPlot : PlotService
+        private PlotService _SignalPlot;
+        public PlotService SignalPlot { get => _SignalPlot; set => Set(ref _SignalPlot, value); }
+        #endregion
+
+        #region FourierPlot : PlotService
+        private PlotService _FourierPlot;
+        public PlotService FourierPlot { get => _FourierPlot; set => Set(ref _FourierPlot, value); }
         #endregion
 
         public bool IsExecuting { get; private set; }
@@ -211,8 +286,6 @@ namespace Lab1.ViewModels
         private bool CanFindRegPathCommandExecute(object p) => true;
         private void OnFindRegPathCommandExecuted(object p) 
         {
-            //App.Services.GetRequiredService<IConnection>().SetCuvetteAndResistorAsync(1, 1);
-            App.Services.GetRequiredService<IDllWorkerService>().CallSum("C:\\Users\\neotro\\source\\repos\\Labs\\sum.dll", "sum", 2, 9);
             if (DriverName is not null) 
             {
                 DriverPath = findRegistryKey.Find(DriverName);
@@ -271,6 +344,18 @@ namespace Lab1.ViewModels
         private void OnOpenCommunicationControlCommandExecuted(object p) => ChangeControl(ControlsType.Communication);
         #endregion
 
+        #region (Command) : OpenDllWorkerControlCommand
+        public ICommand OpenDllWorkerControlCommand { get; }
+        private bool CanOpenDllWorkerControlCommandExecute(object p) => true;
+        private void OnOpenDllWorkerControlCommandExecuted(object p) => ChangeControl(ControlsType.DLLWorker);
+        #endregion
+
+        #region (Command) : OpenMathLinkCommand
+        public ICommand OpenMathLinkCommand { get; }
+        private bool CanOpenMathLinkCommandExecute(object p) => true;
+        private void OnOpenMathLinkCommandExecuted(object p) => ChangeControl(ControlsType.MathLink);
+        #endregion
+
         #region (Command) : ConnectionCommand
         public ICommand ConnectionCommand { get; }
         private bool CanConnectionCommandExecute(object p) => true;
@@ -303,10 +388,53 @@ namespace Lab1.ViewModels
         }
         #endregion
 
-        #region (Command) : StartScriptCommand
-        public ICommand StartScriptCommand { get; }
-        
+        #region (Command) : LoadSumDLLCommand
+        public ICommand LoadSumDLLCommand { get; }
+        private bool CanLoadSumDLLCommandExecute(object p) => true;
+        private void OnLoadSumDLLCommandExecuted(object p)
+        {
+            App.Services.GetRequiredService<IDllWorkerService>().InitOcs();
+            if (!App.Services.GetRequiredService<IDllWorkerService>().DllLoad(DllFilePath)) 
+            {
+                DllWorkerServiceResult = "Dll не была загружена";
+                return;
+            }
 
+            DllWorkerServiceResult = "Dll была успешно загружена";
+        }
+        #endregion
+
+        #region (Command) : SelectDllFuncCommand
+        public ICommand SelectDllFuncCommand { get; }
+        private bool CanSelectDllFuncCommandExecute(object p) => true;
+        private void OnSelectDllFuncCommandExecuted(object p)
+        {
+            if (!App.Services.GetRequiredService<IDllWorkerService>().FunctionSelect(FuncName))
+            {
+                DllWorkerServiceResult = $"Функция {FuncName} не существует";
+                return;
+            }
+
+            DllWorkerServiceResult = $"Функция {FuncName} была выбрана";
+        }
+        #endregion
+
+        #region (Command) : CallFuncCommand
+        public ICommand CallFuncCommand { get; }
+        private bool CanCallFuncCommandExecute(object p) => true;
+        private void OnCallFuncCommandExecuted(object p)
+        {
+            if (!App.Services.GetRequiredService<IDllWorkerService>().CallSum(DllSumXParam, DllSumYParam, out int res))
+            {
+                DllWorkerServiceResult = $"Функция {FuncName} не была вызвана";
+                return;
+            }
+            DllWorkerServiceResult = $"Функция {FuncName} вернула {res}";
+        }
+        #endregion
+
+        #region (Command) : StartScriptCommand
+        public ICommand StartScriptCommand { get; }      
         private bool CanStartScriptCommandExecute(object p) => true;
         private void OnStartScriptCommandExecuted(object p)
         {
@@ -314,8 +442,25 @@ namespace Lab1.ViewModels
         }
         #endregion
 
+        #region (Command) : SelectKernelCommand
+        public ICommand SelectKernelCommand { get; }
+        private bool CanSelectKernelCommandExecute(object p) => true;
+        private void OnSelectKernelCommandExecuted(object p)
+        {
+            SelectKernel();
+        }
         #endregion
 
+        #region (Command) : SolveEquationCommand
+        public ICommand SolveEquationCommand { get; }
+        private bool CanSolveEquationCommandExecute(object p) => true;
+        private void OnSolveEquationCommandExecuted(object p)
+        {
+            SolveEquationAsync();
+        }
+        #endregion
+
+        #endregion
 
         #region Methods
         private void ChangeControl(ControlsType sender) 
@@ -323,6 +468,8 @@ namespace Lab1.ViewModels
             CommunicationControlVisibility = Visibility.Collapsed;
             RegistryAndDevicesControlVisibility = Visibility.Collapsed;
             ScriptControlVisibility = Visibility.Collapsed;
+            DLLWorkerControlVisibility = Visibility.Collapsed;
+            MathLinkControlVisibility = Visibility.Collapsed;
 
             if (sender == ControlsType.RegistryAndDevices) 
             {
@@ -335,6 +482,14 @@ namespace Lab1.ViewModels
             else if(sender == ControlsType.Script) 
             {
                 ScriptControlVisibility= Visibility.Visible;
+            }
+            else if (sender == ControlsType.DLLWorker)
+            {
+                DLLWorkerControlVisibility = Visibility.Visible;
+            }
+            else if(sender == ControlsType.MathLink) 
+            {
+                MathLinkControlVisibility = Visibility.Visible;
             }
         }
 
@@ -351,6 +506,16 @@ namespace Lab1.ViewModels
                 LogText += $"ОШИБКА: {ex.Message}\n";
             }
         }
+
+        private async void SelectKernel() 
+        {
+            await App.Services.GetRequiredService<IMathLink>().SelectKernelAsync();
+        }
+
+        private async void SolveEquationAsync()
+        {
+            await App.Services.GetRequiredService<IMathLink>().SolveEquationAsync(Equation,T0,Tmax,Dt);
+        }
         #endregion
 
         #region Handlers
@@ -359,6 +524,14 @@ namespace Lab1.ViewModels
             IsConnected = e;
             ConnectionButtonName = e ? "Disconnect" : "Connect";
             IsConnectionButtonEnabled = true;
+        }
+
+        private void OnSignalDataHandled(object? sender, List<SignalModel> e)
+        {
+            if (e is null)
+                return;
+
+            SignalPoints = new ObservableCollection<SignalModel>(e);
         }
         #endregion
         public MainWindowViewModel() 
@@ -375,19 +548,31 @@ namespace Lab1.ViewModels
             RegistryAndDevicesControlVisibility = Visibility.Visible;
             CommunicationControlVisibility = Visibility.Collapsed;
             ScriptControlVisibility = Visibility.Collapsed;
+            DLLWorkerControlVisibility = Visibility.Collapsed;
 
             FindRegPathCommand = new LambdaCommand(OnFindRegPathCommandExecuted, CanFindRegPathCommandExecute);
             FindDevicesCommand = new LambdaCommand(OnFindDevicesCommandExecuted, CanFindDevicesCommandExecute);
             ConnectionCommand = new LambdaCommand(OnConnectionCommandExecuted, CanConnectionCommandExecute);
             SendSetRequestCommand = new LambdaCommand(OnSendSetRequestCommandExecuted, CanSendSetRequestCommandExecute);
             StartScriptCommand = new LambdaCommand(OnStartScriptCommandExecuted, CanStartScriptCommandExecute);
+            CallFuncCommand = new LambdaCommand(OnCallFuncCommandExecuted, CanCallFuncCommandExecute);
+            LoadSumDLLCommand = new LambdaCommand(OnLoadSumDLLCommandExecuted, CanLoadSumDLLCommandExecute);
+            SelectDllFuncCommand = new LambdaCommand(OnSelectDllFuncCommandExecuted, CanSelectDllFuncCommandExecute);
+            OpenDllWorkerControlCommand = new LambdaCommand(OnOpenDllWorkerControlCommandExecuted, CanOpenDllWorkerControlCommandExecute);
+            OpenMathLinkCommand = new LambdaCommand(OnOpenMathLinkCommandExecuted, CanOpenMathLinkCommandExecute);
+            SelectKernelCommand = new LambdaCommand(OnSelectKernelCommandExecuted, CanSelectKernelCommandExecute);
+            SolveEquationCommand = new LambdaCommand(OnSolveEquationCommandExecuted, CanSolveEquationCommandExecute);
 
             OpenCommunicationControlCommand = new LambdaCommand(OnOpenCommunicationControlCommandExecuted, CanOpenCommunicationControlCommandExecute);
             OpenRegistryAndDeviceControlCommand = new LambdaCommand(OnOpenRegistryAndDeviceControlCommandExecuted, CanOpenRegistryAndDeviceControlCommandExecute);
             OpenScriptControlCommand = new LambdaCommand(OnOpenScriptControlCommandExecuted, CanOpenScriptControlCommandExecute);
 
             communication.ConnectionChanged += OnConnectionChanged;
+
+            App.Services.GetRequiredService<IMathLink>().SignalDataHandled += OnSignalDataHandled;
+           
         }
 
+        
     }
 }

@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Lab1.Core.Libs
 {
@@ -22,6 +19,24 @@ namespace Lab1.Core.Libs
         [DllImport("kernel32.dll")]
         public static extern uint FormatMessage(uint dwFlags, IntPtr lpSource, uint dwMessageId,
                                       uint dwLanguageId, StringBuilder lpBuffer, uint nSize, IntPtr Arguments);
+
+        [DllImport("ole32.dll")]
+        public static extern int CoCreateInstance(
+        ref Guid rclsid, IntPtr pUnkOuter, uint dwClsContext, ref Guid riid, out IntPtr ppv);
+
+        [DllImport("ole32.dll")]
+        public static extern int CoInitialize(IntPtr pvReserved);
+
+        [DllImport("ole32.dll")]
+        public static extern void CoUninitialize();
+
+        [DllImport("oleaut32.dll", CharSet = CharSet.Unicode, PreserveSig = true)]
+        public static extern int LoadTypeLibEx(
+        string szFile,
+        REGKIND regKind,
+        out IntPtr ppTLib);  
+
+        public enum REGKIND { REGKIND_DEFAULT, REGKIND_REGISTER, REGKIND_NONE }
 
     }
 }

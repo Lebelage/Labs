@@ -11,6 +11,8 @@ namespace Lab1.ViewModels
     {
         public static IServiceCollection AddViewModels(this IServiceCollection services) => services
             .AddSingleton<MainWindowViewModel>()
+            .AddSingleton<SignalPlotViewModel>()
+            .AddSingleton<FourierPlotViewModel>()
             ;
     }
 }

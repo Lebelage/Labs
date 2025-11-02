@@ -41,7 +41,6 @@ namespace Lab1.Services
         [DllImport("user32", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern uint GetRawInputDeviceInfo(IntPtr pRawRawInputDeviceList, uint uiCommand, IntPtr pData, ref uint pcbSize);
 
-
         [DllImport("setupapi.dll", SetLastError = true)]
         public static extern IntPtr SetupDiGetClassDevs(ref Guid ClassGuid, string Enumerator, IntPtr hwndParent, uint Flags);
 

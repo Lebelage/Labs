@@ -8,6 +8,10 @@ namespace Lab1.Services.Interface
 {
     internal interface IDllWorkerService
     {
-        void CallSum(string dllPath, string funName, int x, int y);
+        bool DllLoad(string filePath);
+        bool FunctionSelect(string funcName);
+        bool CallSum(int x, int y, out int result);
+
+        void InitOcs(string tlbPath = "C:\\Users\\neotro\\source\\repos\\OscDll\\OscB322.tlb", string coclassName = "OscDeviceB322", string interfaceName = "IOsc");
     }
 }
