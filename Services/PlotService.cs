@@ -14,6 +14,8 @@ namespace Lab1.Services
         private WpfPlot _Plot;
         public void Draw(List<SignalModel> signal)
         {
+            _Plot.Plot.Clear();
+
             var x_val = signal.Select(s => s._X).ToArray();
             var y_val = signal.Select(s => s._T).ToArray();
 
@@ -23,6 +25,8 @@ namespace Lab1.Services
 
         public void Draw(List<FourierModel> signal)
         {
+            _Plot.Plot.Clear();
+
             var x_val = signal.Select(s => s._Frequency).ToArray();
             var y_val = signal.Select(s => s._Amplitude).ToArray();
 

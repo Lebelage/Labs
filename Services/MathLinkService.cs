@@ -106,32 +106,25 @@ fourierTransform = Fourier[signal, FourierParameters -> {1, -1}];
 freqStep = 1/(n * dtValue);
 freqsFull = Table[If[i <= n/2, (i-1)*freqStep, (i-1-n)*freqStep], {i, n}];
 
-(* 2. ФИЛЬТР НИЗКИХ ЧАСТОТ *)
-cutoffFreq = 2.0; (* Частота среза - настройте по необходимости *)
+(* 2. ПОЛОСОВОЙ ФИЛЬТР 1-5 ГЦ *)
+lowFreq = 1.0;   (* Нижняя граница *)
+highFreq = 5.0;  (* Верхняя граница *)
 
-(* Создаем фильтр низких частот *)
-lowPassFilter = Table[If[Abs[freqsFull[[i]]] <= cutoffFreq, 1, 0], {i, n}];
+(* Создаем полосовой фильтр *)
+bandPassFilter = Table[If[lowFreq <= Abs[freqsFull[[i]]] <= highFreq, 1, 0], {i, n}];
 
 (* Применяем фильтр к Фурье-спектру *)
-filteredFourier = fourierTransform * lowPassFilter;
+filteredFourier = fourierTransform * bandPassFilter;
 
-(* 3. ПОДГОТОВКА ДАННЫХ ДЛЯ ВЫВОДА *)
-
-(* Исходный спектр (только положительные частоты) *)
-fourierTransformPositive = Take[fourierTransform, Ceiling[n/2]];
-freqsPositive = Table[(i-1)*freqStep, {i, Ceiling[n/2]}];
-fourierData = Transpose[{freqsPositive, Abs[fourierTransformPositive]}];
+(* 3. ПОДГОТОВКА ОТФИЛЬТРОВАННОГО СПЕКТРА *)
 
 (* Отфильтрованный спектр (только положительные частоты) *)
 filteredFourierPositive = Take[filteredFourier, Ceiling[n/2]];
-filteredFourierData = Transpose[{freqsPositive, Abs[filteredFourierPositive]}];
+freqsPositive = Table[(i-1)*freqStep, {i, Ceiling[n/2]}];
+filteredSpectrumData = Transpose[{freqsPositive, Abs[filteredFourierPositive]}];
 
-(* Возвращаем данные спектров *)
-result = {
-    ""originalSpectrum"" -> fourierData,
-    ""filteredSpectrum"" -> filteredFourierData
-};
-result";
+(* Возвращаем только отфильтрованный спектр *)
+filteredSpectrumData";
 
                     _Link.Evaluate(fourierCode);
                     _Link.WaitForAnswer();
@@ -145,6 +138,33 @@ result";
                     _Link.Evaluate("Length[fourierData]");
                     _Link.WaitForAnswer();
                     int fourierPoints = _Link.GetInteger();
+                    _Link.NewPacket();
+
+                    string restoreCode = @"
+(* 1. ВОССТАНОВЛЕНИЕ СИГНАЛА ИЗ ОТФИЛЬТРОВАННОГО СПЕКТРА *)
+(* Предполагаем, что filteredFourier уже существует в памяти *)
+
+n = Length[filteredFourier];
+
+(* Обратное Фурье-преобразование *)
+restoredSignal = Re[InverseFourier[filteredFourier, FourierParameters -> {1, -1}]];
+
+(* 2. ПОДГОТОВКА ДАННЫХ ДЛЯ ВЫВОДА *)
+
+(* Восстановленный сигнал во временной области *)
+timePoints = signalData[[All, 1]];
+restoredTimeData = Transpose[{timePoints, restoredSignal}];
+
+(* Возвращаем восстановленный сигнал *)
+restoredTimeData";
+
+                    _Link.Evaluate(restoreCode);
+                    _Link.WaitForAnswer();
+
+                    if (_Link.GetType() == typeof(void))
+                    {
+                        throw new Exception("Ошибка при восстановлении сигнала в Mathematica");
+                    }
                     _Link.NewPacket();
 
                     GetDataFromWolfram();
@@ -170,9 +190,18 @@ result";
 
                 _Link.NewPacket();
 
-                _Link.Evaluate("fourierData");
+                _Link.Evaluate("filteredSpectrumData");
                 _Link.WaitForAnswer();
                 var fourierArray = (double[,])_Link.GetArray(typeof(double), 2);
+
+                if (fourierArray is null)
+                    throw new ArgumentNullException();
+
+                _Link.NewPacket();
+
+                _Link.Evaluate("restoredTimeData");
+                _Link.WaitForAnswer();
+                var restoredArray = (double[,])_Link.GetArray(typeof(double), 2);
 
                 if (fourierArray is null)
                     throw new ArgumentNullException();
@@ -182,7 +211,7 @@ result";
                 Application.Current.Dispatcher.Invoke(
                     new Action(() =>
                     {
-                        SignalDataHandled?.Invoke(this, HandleSignalData(signalArray));
+                        SignalDataHandled?.Invoke(this, HandleSignalData(restoredArray));
                         FourierDataHandled?.Invoke(this, HandleFourierData(fourierArray));
                     }));
             }
@@ -211,6 +240,17 @@ result";
                 {
                     _Frequency = data[i, 0],
                     _Amplitude = data[i, 1],
+                }).ToList();
+        }
+
+        private List<SignalModel> HandleRestoredData(double[,] data)
+        {
+            return Enumerable
+                .Range(0, data.GetLength(0))
+                .Select(i => new SignalModel
+                {
+                    _X = data[i, 0],
+                    _T = data[i, 1],
                 }).ToList();
         }
 
