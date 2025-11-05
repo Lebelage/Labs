@@ -106,25 +106,32 @@ fourierTransform = Fourier[signal, FourierParameters -> {1, -1}];
 freqStep = 1/(n * dtValue);
 freqsFull = Table[If[i <= n/2, (i-1)*freqStep, (i-1-n)*freqStep], {i, n}];
 
-(* 2. ПОЛОСОВОЙ ФИЛЬТР 1-5 ГЦ *)
-lowFreq = 1.0;   (* Нижняя граница *)
-highFreq = 5.0;  (* Верхняя граница *)
-
-(* Создаем полосовой фильтр *)
-bandPassFilter = Table[If[lowFreq <= Abs[freqsFull[[i]]] <= highFreq, 1, 0], {i, n}];
-
-(* Применяем фильтр к Фурье-спектру *)
-filteredFourier = fourierTransform * bandPassFilter;
-
-(* 3. ПОДГОТОВКА ОТФИЛЬТРОВАННОГО СПЕКТРА *)
-
-(* Отфильтрованный спектр (только положительные частоты) *)
-filteredFourierPositive = Take[filteredFourier, Ceiling[n/2]];
+(* 2. ПОДГОТОВКА ИСХОДНОГО СПЕКТРА ДЛЯ ВЫВОДА *)
+fourierTransformPositive = Take[fourierTransform, Ceiling[n/2]];
 freqsPositive = Table[(i-1)*freqStep, {i, Ceiling[n/2]}];
-filteredSpectrumData = Transpose[{freqsPositive, Abs[filteredFourierPositive]}];
+originalSpectrumData = Transpose[{freqsPositive, Abs[fourierTransformPositive]}];
 
-(* Возвращаем только отфильтрованный спектр *)
+(* Возвращаем исходный спектр *)
+originalSpectrumData
+
+(*3.ПРИМЕНЕНИЕ РЕЖЕКУЩЕГО ФИЛЬТРА(ЗАНУЛЕНИЕ ДИАПАЗОНА { lowFreq}
+                    -{ highFreq}
+                    ГЦ) *)
+
+(*Создаем режекущий фильтр -зануляем диапазон 1 - 5 Гц *)
+bandStopFilter = Table[If[{ lowFreq.ToString(CultureInfo.InvariantCulture)} <= Abs[freqsFull[[i]]] <= { highFreq.ToString(CultureInfo.InvariantCulture)}, 0, 1], { i, n}];
+
+            (*Применяем фильтр к Фурье - спектру - зануляем выбранный диапазон *)
+filteredFourier = fourierTransform * bandStopFilter;
+
+            (*4.ПОДГОТОВКА ОТФИЛЬТРОВАННОГО СПЕКТРА ДЛЯ ВЫВОДА *)
+filteredFourierPositive = Take[filteredFourier, Ceiling[n / 2]];
+            filteredSpectrumData = Transpose[{ freqsPositive, Abs[filteredFourierPositive]}];
+
+            (*Возвращаем отфильтрованный спектр *)
 filteredSpectrumData";
+
+
 
                     _Link.Evaluate(fourierCode);
                     _Link.WaitForAnswer();
@@ -141,22 +148,17 @@ filteredSpectrumData";
                     _Link.NewPacket();
 
                     string restoreCode = @"
-(* 1. ВОССТАНОВЛЕНИЕ СИГНАЛА ИЗ ОТФИЛЬТРОВАННОГО СПЕКТРА *)
-(* Предполагаем, что filteredFourier уже существует в памяти *)
-
-n = Length[filteredFourier];
+(* 5. ВОССТАНОВЛЕНИЕ СИГНАЛА ИЗ ОТФИЛЬТРОВАННОГО СПЕКТРА *)
 
 (* Обратное Фурье-преобразование *)
 restoredSignal = Re[InverseFourier[filteredFourier, FourierParameters -> {1, -1}]];
 
-(* 2. ПОДГОТОВКА ДАННЫХ ДЛЯ ВЫВОДА *)
-
-(* Восстановленный сигнал во временной области *)
-timePoints = signalData[[All, 1]];
-restoredTimeData = Transpose[{timePoints, restoredSignal}];
+(* Подготовка данных восстановленного сигнала *)
+restoredTimeData = Transpose[{signalData[[All, 1]], restoredSignal}];
 
 (* Возвращаем восстановленный сигнал *)
 restoredTimeData";
+
 
                     _Link.Evaluate(restoreCode);
                     _Link.WaitForAnswer();
