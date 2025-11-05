@@ -94,11 +94,21 @@ namespace Lab1.Services
                     int signalPoints = _Link.GetInteger();
 
                     string fourierCode = @"
-            fourierTransform = Fourier[signalData[[All, 2]]];
-            fourierFreqs = Table[(n-1)/(Length[fourierTransform]*" + dt.ToString(CultureInfo.InvariantCulture) + @"), {n, Length[fourierTransform]}];
-            fourierData = Transpose[{fourierFreqs, Abs[fourierTransform]}];
-            If[!MatrixQ[fourierData], Throw['Invalid Fourier data']];
-            fourierData";
+    signal = signalData[[All, 2]];
+    n = Length[signal];
+    (* Вычисляем Фурье-преобразование *)
+    fourierTransform = Fourier[signal, FourierParameters -> {1, -1}];
+    (* Смещаем нулевую частоту в центр *)
+    fourierTransformShifted = RotateRight[fourierTransform, Floor[n/2]];
+    (* Правильно вычисляем частоты *)
+    freqStep = 1/(n*" + dt.ToString(CultureInfo.InvariantCulture) + @");
+    freqs = Table[If[i <= Ceiling[n/2], (i-1)*freqStep, (i-1-n)*freqStep], {i, n}];
+    (* Сортируем частоты для правильного отображения *)
+    fourierData = Transpose[{freqs, Abs[fourierTransformShifted]}];
+    (* Берем только положительные частоты для одного пика *)
+    fourierDataPositive = Select[fourierData, First[#] >= 0 &];
+    If[!MatrixQ[fourierDataPositive], Throw['Invalid Fourier data']];
+    fourierDataPositive";
 
                     _Link.Evaluate(fourierCode);
                     _Link.WaitForAnswer();

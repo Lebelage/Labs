@@ -32,15 +32,13 @@ namespace Lab1.Core.Device
 
         public async Task<bool> CloseConnectionAsync()
         {
-            if (!ConnectionSource.IsOpen)
-                return false;
-
             try
             {
                 await Task.Run(() =>
                 {
 
                     ConnectionSource?.Close();
+                    ConnectionSource?.Dispose();
                     IsOpenned = false;
 
                     ConnectionChanged?.Invoke(this, false);

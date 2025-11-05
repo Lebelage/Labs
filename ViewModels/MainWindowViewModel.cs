@@ -10,6 +10,7 @@ using Lab1.Services.Interface;
 using Lab1.ViewModels.Base;
 using Lab1.Views.controls;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ScottPlot.Plottable;
 using System;
 using System.CodeDom.Compiler;
@@ -17,11 +18,14 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO.Packaging;
 using System.IO.Ports;
+using System.Linq;
 using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 
 
 namespace Lab1.ViewModels
@@ -86,7 +90,8 @@ namespace Lab1.ViewModels
 
         #region COMPorts : ObservableCollection<string> - Available computer COM ports list
         /// <summary>Available computer COM ports list</summary>
-        public ObservableCollection<string> COMPorts { get; } = new() { };
+        private ObservableCollection<string> _COMPorts;
+        public ObservableCollection<string> COMPorts { get => _COMPorts; set => Set(ref _COMPorts, value); }
         #endregion
 
         #region BaudRates : ObservableCollection<int> - Default baud rates list
@@ -366,7 +371,7 @@ namespace Lab1.ViewModels
         private bool CanConnectionCommandExecute(object p) => true;
         private void OnConnectionCommandExecuted(object p) 
         {
-            communication.CreateConnectionSource("COM1");
+            communication.CreateConnectionSource(SelectedCOMPort);
 
             if (!IsConnected) 
             {
@@ -398,7 +403,7 @@ namespace Lab1.ViewModels
         private bool CanLoadSumDLLCommandExecute(object p) => true;
         private void OnLoadSumDLLCommandExecuted(object p)
         {
-            App.Services.GetRequiredService<IDllWorkerService>().InitOcs();
+            //App.Services.GetRequiredService<IDllWorkerService>().InitOcs();
             if (!App.Services.GetRequiredService<IDllWorkerService>().DllLoad(DllFilePath)) 
             {
                 DllWorkerServiceResult = "Dll не была загружена";
@@ -521,6 +526,18 @@ namespace Lab1.ViewModels
         {
             await App.Services.GetRequiredService<IMathLink>().SolveEquationAsync(Equation,T0,Tmax,Dt);
         }
+
+        private void UpdateCOMportsList() 
+        {
+            try
+            {
+                string com_pattern = @"COM\d+";
+                COMPorts = new ObservableCollection<string>([.. SerialPort.GetPortNames().Where(s => Regex.IsMatch(s, com_pattern))]);
+            }
+            catch (Exception ex)
+            {
+            }
+        }
         #endregion
 
         #region Handlers
@@ -546,6 +563,7 @@ namespace Lab1.ViewModels
         #endregion
         public MainWindowViewModel() 
         {
+
             findRegistryKey = App.Services.GetRequiredService<IFindRegistryKey>();
             usbDeviceFinder = App.Services.GetRequiredService<IUSBDeviceFinder>();
             communication = App.Services.GetRequiredService<IConnection>();
@@ -583,6 +601,7 @@ namespace Lab1.ViewModels
             App.Services.GetRequiredService<IMathLink>().SignalDataHandled += OnSignalDataHandled;
             App.Services.GetRequiredService<IMathLink>().ConnectionChanged += OnMathLinkConnectionChanged;
 
+            UpdateCOMportsList();
 
         }
 
