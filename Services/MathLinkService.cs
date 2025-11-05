@@ -94,21 +94,44 @@ namespace Lab1.Services
                     int signalPoints = _Link.GetInteger();
 
                     string fourierCode = @"
-    signal = signalData[[All, 2]];
-    n = Length[signal];
-    (* Вычисляем Фурье-преобразование *)
-    fourierTransform = Fourier[signal, FourierParameters -> {1, -1}];
-    (* Смещаем нулевую частоту в центр *)
-    fourierTransformShifted = RotateRight[fourierTransform, Floor[n/2]];
-    (* Правильно вычисляем частоты *)
-    freqStep = 1/(n*" + dt.ToString(CultureInfo.InvariantCulture) + @");
-    freqs = Table[If[i <= Ceiling[n/2], (i-1)*freqStep, (i-1-n)*freqStep], {i, n}];
-    (* Сортируем частоты для правильного отображения *)
-    fourierData = Transpose[{freqs, Abs[fourierTransformShifted]}];
-    (* Берем только положительные частоты для одного пика *)
-    fourierDataPositive = Select[fourierData, First[#] >= 0 &];
-    If[!MatrixQ[fourierDataPositive], Throw['Invalid Fourier data']];
-    fourierDataPositive";
+(* Получаем исходный сигнал *)
+signal = signalData[[All, 2]];
+n = Length[signal];
+dtValue = " + dt.ToString(CultureInfo.InvariantCulture) + @";
+
+(* 1. ПРЯМОЕ ФУРЬЕ-ПРЕОБРАЗОВАНИЕ *)
+fourierTransform = Fourier[signal, FourierParameters -> {1, -1}];
+
+(* Вычисляем частоты для полного спектра *)
+freqStep = 1/(n * dtValue);
+freqsFull = Table[If[i <= n/2, (i-1)*freqStep, (i-1-n)*freqStep], {i, n}];
+
+(* 2. ФИЛЬТР НИЗКИХ ЧАСТОТ *)
+cutoffFreq = 2.0; (* Частота среза - настройте по необходимости *)
+
+(* Создаем фильтр низких частот *)
+lowPassFilter = Table[If[Abs[freqsFull[[i]]] <= cutoffFreq, 1, 0], {i, n}];
+
+(* Применяем фильтр к Фурье-спектру *)
+filteredFourier = fourierTransform * lowPassFilter;
+
+(* 3. ПОДГОТОВКА ДАННЫХ ДЛЯ ВЫВОДА *)
+
+(* Исходный спектр (только положительные частоты) *)
+fourierTransformPositive = Take[fourierTransform, Ceiling[n/2]];
+freqsPositive = Table[(i-1)*freqStep, {i, Ceiling[n/2]}];
+fourierData = Transpose[{freqsPositive, Abs[fourierTransformPositive]}];
+
+(* Отфильтрованный спектр (только положительные частоты) *)
+filteredFourierPositive = Take[filteredFourier, Ceiling[n/2]];
+filteredFourierData = Transpose[{freqsPositive, Abs[filteredFourierPositive]}];
+
+(* Возвращаем данные спектров *)
+result = {
+    ""originalSpectrum"" -> fourierData,
+    ""filteredSpectrum"" -> filteredFourierData
+};
+result";
 
                     _Link.Evaluate(fourierCode);
                     _Link.WaitForAnswer();
