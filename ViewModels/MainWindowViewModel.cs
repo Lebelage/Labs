@@ -269,6 +269,11 @@ namespace Lab1.ViewModels
         public PlotService FourierPlot { get => _FourierPlot; set => Set(ref _FourierPlot, value); }
         #endregion
 
+        #region IsSolveEnabled : bool
+        private bool _IsSolveEnabled = false;
+        public bool IsSolveEnabled { get => _IsSolveEnabled; set => Set(ref _IsSolveEnabled, value); }
+        #endregion
+
         public bool IsExecuting { get; private set; }
         private bool IsConnected = false;
         #endregion
@@ -533,6 +538,11 @@ namespace Lab1.ViewModels
 
             SignalPoints = new ObservableCollection<SignalModel>(e);
         }
+
+        private void OnMathLinkConnectionChanged(object? sender, bool e)
+        {
+            IsSolveEnabled = e;
+        }
         #endregion
         public MainWindowViewModel() 
         {
@@ -549,6 +559,7 @@ namespace Lab1.ViewModels
             CommunicationControlVisibility = Visibility.Collapsed;
             ScriptControlVisibility = Visibility.Collapsed;
             DLLWorkerControlVisibility = Visibility.Collapsed;
+            MathLinkControlVisibility = Visibility.Collapsed;
 
             FindRegPathCommand = new LambdaCommand(OnFindRegPathCommandExecuted, CanFindRegPathCommandExecute);
             FindDevicesCommand = new LambdaCommand(OnFindDevicesCommandExecuted, CanFindDevicesCommandExecute);
@@ -570,7 +581,9 @@ namespace Lab1.ViewModels
             communication.ConnectionChanged += OnConnectionChanged;
 
             App.Services.GetRequiredService<IMathLink>().SignalDataHandled += OnSignalDataHandled;
-           
+            App.Services.GetRequiredService<IMathLink>().ConnectionChanged += OnMathLinkConnectionChanged;
+
+
         }
 
         

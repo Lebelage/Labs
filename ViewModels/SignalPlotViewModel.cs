@@ -32,7 +32,7 @@ namespace Lab1.ViewModels
         {
             _Plot = new WpfPlot();
             _Signal = new PlotService();
-            _Signal.Initialize(_Plot, "x(t)", "t");
+            _Signal.Initialize(_Plot, "x(t)", "t, sec");
 
             App.Services.GetRequiredService<IMathLink>().SignalDataHandled += OnSignalDataHandled;
         }

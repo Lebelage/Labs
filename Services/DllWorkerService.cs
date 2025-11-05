@@ -33,20 +33,27 @@ namespace Lab1.Services
         }
         public bool DllLoad(string filePath)
         {
-            if (!File.Exists(filePath))
-                return false;
-
-            hModule = DllInvoke.LoadLibrary(filePath);
-            if (hModule == IntPtr.Zero)
+            try
             {
-                Console.WriteLine($"Не удалось загрузить DLL: {filePath}");
+                if (!File.Exists(filePath))
+                    return false;
+
+                hModule = DllInvoke.LoadLibrary(filePath);
+                if (hModule == IntPtr.Zero)
+                {
+                    Console.WriteLine($"Не удалось загрузить DLL: {filePath}");
+                    return false;
+                }
+                return true;
+            }
+            catch 
+            {
                 return false;
             }
-            return true;
         }
         public bool FunctionSelect(string funcName)
         {
-            if(hModule == IntPtr.Zero) 
+            if (hModule == IntPtr.Zero)
             {
                 return false;
             }
@@ -122,7 +129,7 @@ namespace Lab1.Services
                 if (hr != 0)
                     throw new COMException($"CoCreateInstance failed: 0x{hr:X8}", hr);
 
-                return; 
+                return;
             }
             finally
             {
