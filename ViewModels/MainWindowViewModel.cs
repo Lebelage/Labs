@@ -245,7 +245,7 @@ namespace Lab1.ViewModels
         #endregion
 
         #region Equation : string
-        private string _Equation = "x[t_]:=Exp[-t/20]*(Sin[2Pi*t]+4Sin[2Pi*4t])";
+        private string _Equation = "Sin[2Pi*t]";
         public string Equation { get => _Equation; set => Set(ref _Equation, value); }
         #endregion
 
@@ -524,7 +524,9 @@ namespace Lab1.ViewModels
 
         private async void SolveEquationAsync()
         {
-            await App.Services.GetRequiredService<IMathLink>().SolveEquationAsync(Equation,T0,Tmax,Dt);
+            //await App.Services.GetRequiredService<IMathLink>().SolveEquationAsync(Equation,T0,Tmax,Dt);
+            await App.Services.GetRequiredService<IMathLink>().GetFourierWithFilterAsync(Equation, T0,Tmax,Dt,0,5);
+            await App.Services.GetRequiredService<IMathLink>().GetReconstructedSignalAsync(T0,Tmax,Dt,1,5);
         }
 
         private void UpdateCOMportsList() 

@@ -13,9 +13,8 @@ namespace Lab1.Services.Interface
         event EventHandler<List<SignalModel>>? SignalDataHandled;
         event EventHandler<List<FourierModel>>? FourierDataHandled;
         Task<bool> SelectKernelAsync();
+        public Task GetFourierWithFilterAsync(string signal, double t0, double tmax, double dt, double lowFreq, double highFreq);
+        public Task GetReconstructedSignalAsync(double t0, double tmax, double dt, double lowFreq, double highFreq);
 
-        Task SolveEquationAsync(string equation, double t0, double tmax, double dt);
-
-        Task SpectrumAsync();
     }
 }

@@ -21,32 +21,24 @@ namespace Lab1.Services
         public event EventHandler<List<FourierModel>>? FourierDataHandled;
 
         private IKernelLink _Link;
+        private string _CurrentSignal;
         public Task<bool> SelectKernelAsync()
         {
             return Task.Run(() =>
             {
                 try
                 {
-                    OpenFileDialog dialog = new OpenFileDialog
-                    {
-                        Title = "Выберите WolframKernel.exe",
-                        Filter = "Wolfram Kernel|MathKernel.exe|Все файлы|*.*",
-                        InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
-                    };
+                    string path = "C:\\Program Files\\Wolfram Research\\Wolfram\\14.3\\MathKernel.exe";
 
-                    if (dialog.ShowDialog() == true)
+                    if (!string.IsNullOrEmpty(path) && File.Exists(path))
                     {
-                        string path = dialog.FileName;
-
-                        if (!string.IsNullOrEmpty(path) && File.Exists(path))
-                        {
-                            var args = $"-linkmode launch -linkname \"{path}\"";
-                            _Link = MathLinkFactory.CreateKernelLink(args);
-                            _Link.WaitAndDiscardAnswer();
-                            ConnectionChanged?.Invoke(this, true);
-                        }
-                        return true;
+                        var args = $"-linkmode launch -linkname \"{path}\"";
+                        _Link = MathLinkFactory.CreateKernelLink(args);
+                        _Link.WaitAndDiscardAnswer();
+                        ConnectionChanged?.Invoke(this, true);
                     }
+                    return true;
+
                 }
                 catch (Exception ex)
                 {
@@ -60,216 +52,140 @@ namespace Lab1.Services
 
         }
 
-        public Task SolveEquationAsync(string equation, double t0, double tmax, double dt)
+
+        public Task GetReconstructedSignalAsync(double t0, double tmax, double dt, double lowFreq, double highFreq)
         {
             return Task.Run(() =>
             {
-                if (_Link is null)
+                if (_Link == null)
                     throw new InvalidOperationException("Wolfram Link не инициализирован.");
 
                 try
                 {
-                    string functionDefinition = equation;
-                    _Link.Evaluate(functionDefinition);
-                    _Link.WaitForAnswer();
-                    _Link.NewPacket();
+                    string restoreCode = $@"
+                (* === Параметры === *)
+                t0 = {t0.ToString(CultureInfo.InvariantCulture)};
+                tmax = {tmax.ToString(CultureInfo.InvariantCulture)};
+                dt = {dt.ToString(CultureInfo.InvariantCulture)};
+                lowFreq = {lowFreq.ToString(CultureInfo.InvariantCulture)};
+                highFreq = {highFreq.ToString(CultureInfo.InvariantCulture)};
 
-                    string signalCode = $@"
-            timeData = Table[{{t, x[t]}}, {{t, {t0.ToString(CultureInfo.InvariantCulture)}, {tmax.ToString(CultureInfo.InvariantCulture)}, {dt.ToString(CultureInfo.InvariantCulture)}}}];
-            signalData = timeData;
-            If[!MatrixQ[signalData], Throw['Invalid signal data']];
-            signalData";
+                t = Range[t0, tmax, dt];
+                signal = {_CurrentSignal};
+                n = Length[signal];
+                dtValue = dt;
+                fs = 1/dtValue;
 
-                    _Link.Evaluate(signalCode);
-                    _Link.WaitForAnswer();
+                fourier = Fourier[signal, FourierParameters -> {{1, -1}}];
 
-                    if (_Link.GetType() == typeof(void))
-                    {
-                        throw new Exception("Ошибка при вычислении сигнала в Mathematica");
-                    }
-                    _Link.NewPacket();
+                freqs = Range[0, fs - fs/n, fs/n];
 
-                    _Link.Evaluate("Length[signalData]");
-                    _Link.WaitForAnswer();
-                    int signalPoints = _Link.GetInteger();
+                filter = Table[
+                    If[{lowFreq} <= Abs[freqs[[i]]] <= {highFreq}, 1, 0],
+                    {{i, n}}
+                ];
+                filteredFourier = fourier * filter;
 
-                    string fourierCode = @"
-(* Получаем исходный сигнал *)
-signal = signalData[[All, 2]];
-n = Length[signal];
-dtValue = " + dt.ToString(CultureInfo.InvariantCulture) + @";
+                restored = Re[InverseFourier[filteredFourier,
+                                            FourierParameters -> {{1, -1}}]];
+                restored = Chop[restored, 10^-12];
 
-(* 1. ПРЯМОЕ ФУРЬЕ-ПРЕОБРАЗОВАНИЕ *)
-fourierTransform = Fourier[signal, FourierParameters -> {1, -1}];
-
-(* Вычисляем частоты для полного спектра *)
-freqStep = 1/(n * dtValue);
-freqsFull = Table[If[i <= n/2, (i-1)*freqStep, (i-1-n)*freqStep], {i, n}];
-
-(* 2. ПОДГОТОВКА ИСХОДНОГО СПЕКТРА ДЛЯ ВЫВОДА *)
-fourierTransformPositive = Take[fourierTransform, Ceiling[n/2]];
-freqsPositive = Table[(i-1)*freqStep, {i, Ceiling[n/2]}];
-originalSpectrumData = Transpose[{freqsPositive, Abs[fourierTransformPositive]}];
-
-(* Возвращаем исходный спектр *)
-originalSpectrumData
-
-(*3.ПРИМЕНЕНИЕ РЕЖЕКУЩЕГО ФИЛЬТРА(ЗАНУЛЕНИЕ ДИАПАЗОНА { lowFreq}
-                    -{ highFreq}
-                    ГЦ) *)
-
-(*Создаем режекущий фильтр -зануляем диапазон 1 - 5 Гц *)
-bandStopFilter = Table[If[{ lowFreq.ToString(CultureInfo.InvariantCulture)} <= Abs[freqsFull[[i]]] <= { highFreq.ToString(CultureInfo.InvariantCulture)}, 0, 1], { i, n}];
-
-            (*Применяем фильтр к Фурье - спектру - зануляем выбранный диапазон *)
-filteredFourier = fourierTransform * bandStopFilter;
-
-            (*4.ПОДГОТОВКА ОТФИЛЬТРОВАННОГО СПЕКТРА ДЛЯ ВЫВОДА *)
-filteredFourierPositive = Take[filteredFourier, Ceiling[n / 2]];
-            filteredSpectrumData = Transpose[{ freqsPositive, Abs[filteredFourierPositive]}];
-
-            (*Возвращаем отфильтрованный спектр *)
-filteredSpectrumData";
-
-
-
-                    _Link.Evaluate(fourierCode);
-                    _Link.WaitForAnswer();
-
-                    if (_Link.GetType() == typeof(void))
-                    {
-                        throw new Exception("Ошибка при вычислении Фурье спектра в Mathematica");
-                    }
-                    _Link.NewPacket();
-
-                    _Link.Evaluate("Length[fourierData]");
-                    _Link.WaitForAnswer();
-                    int fourierPoints = _Link.GetInteger();
-                    _Link.NewPacket();
-
-                    string restoreCode = @"
-(* 5. ВОССТАНОВЛЕНИЕ СИГНАЛА ИЗ ОТФИЛЬТРОВАННОГО СПЕКТРА *)
-
-(* Обратное Фурье-преобразование *)
-restoredSignal = Re[InverseFourier[filteredFourier, FourierParameters -> {1, -1}]];
-
-(* Подготовка данных восстановленного сигнала *)
-restoredTimeData = Transpose[{signalData[[All, 1]], restoredSignal}];
-
-(* Возвращаем восстановленный сигнал *)
-restoredTimeData";
-
+                result = Transpose[{{t, restored}}];
+                N[result]          
+            ";
 
                     _Link.Evaluate(restoreCode);
                     _Link.WaitForAnswer();
-
-                    if (_Link.GetType() == typeof(void))
-                    {
-                        throw new Exception("Ошибка при восстановлении сигнала в Mathematica");
-                    }
                     _Link.NewPacket();
 
-                    GetDataFromWolfram();
+                    _Link.Evaluate("result");
+                    _Link.WaitForAnswer();
+                    var result = (double[,])_Link.GetArray(typeof(double), 2);
+                    _Link.NewPacket();
 
+                    var points = Enumerable.Range(0, result.GetLength(0))
+                        .Select(i => new SignalModel
+                        {
+                            _X = result[i, 0],
+                            _T = result[i, 1]
+                        }).ToList();
+
+                    Application.Current.Dispatcher.Invoke(() => { SignalDataHandled?.Invoke(this, points); });
                 }
                 catch (Exception ex)
                 {
-                    _Link.NewPacket();
+                    _Link?.NewPacket();
+                    throw;
                 }
             });
         }
-
-        private void GetDataFromWolfram()
+        public Task GetFourierWithFilterAsync(string signal, double t0, double tmax, double dt, double lowFreq, double highFreq)
         {
-            try
+
+            return Task.Run(() =>
             {
-                _Link.Evaluate("signalData");
-                _Link.WaitForAnswer();
-                var signalArray = (double[,])_Link.GetArray(typeof(double), 2);
+                if (_Link == null) throw new InvalidOperationException("Wolfram Link не инициализирован.");
 
-                if (signalArray is null)
-                    throw new ArgumentNullException();
+                _CurrentSignal = signal;
 
-                _Link.NewPacket();
-
-                _Link.Evaluate("filteredSpectrumData");
-                _Link.WaitForAnswer();
-                var fourierArray = (double[,])_Link.GetArray(typeof(double), 2);
-
-                if (fourierArray is null)
-                    throw new ArgumentNullException();
-
-                _Link.NewPacket();
-
-                _Link.Evaluate("restoredTimeData");
-                _Link.WaitForAnswer();
-                var restoredArray = (double[,])_Link.GetArray(typeof(double), 2);
-
-                if (fourierArray is null)
-                    throw new ArgumentNullException();
-
-                _Link.NewPacket();
-
-                Application.Current.Dispatcher.Invoke(
-                    new Action(() =>
-                    {
-                        SignalDataHandled?.Invoke(this, HandleSignalData(restoredArray));
-                        FourierDataHandled?.Invoke(this, HandleFourierData(fourierArray));
-                    }));
-            }
-            catch (Exception ex)
-            {
-                _Link?.NewPacket();
-            }
-        }
-
-        private List<SignalModel> HandleSignalData(double[,] data)
-        {
-            return Enumerable
-                .Range(0, data.GetLength(0))
-                .Select(i => new SignalModel
+                try
                 {
-                    _X = data[i, 0],
-                    _T = data[i, 1],
-                }).ToList();
-        }
 
-        private List<FourierModel> HandleFourierData(double[,] data)
-        {
-            return Enumerable
-                .Range(0, data.GetLength(0))
-                .Select(i => new FourierModel
+                    string signalCode = $@"
+                        t = Range[{t0.ToString(CultureInfo.InvariantCulture)},
+                                        {tmax.ToString(CultureInfo.InvariantCulture)},
+                                        {dt.ToString(CultureInfo.InvariantCulture)}];
+                        signal = {signal};
+                        n = Length[signal];
+                        dtValue = {dt.ToString(CultureInfo.InvariantCulture)};
+                        fs = 1/dtValue;
+
+                        (* ДПФ *)
+                        fourier = Fourier[signal, FourierParameters -> {{1, -1}}];
+
+                        (* Частотная ось *)
+                        freqs = Range[0, fs - fs/n, fs/n];
+
+                        (* ФНЧ *)
+                        filter = Table[If[{lowFreq} <= Abs[freqs[[i]]] <= {highFreq}, 1, 0], {{i, n}}];
+                        filteredFourier = fourier * filter;
+
+                        (* Положительная часть *)
+                        posCount = Ceiling[n/2];
+                        freqsPos = Table[(i-1)/(n*dtValue), {{i, posCount}}];
+                        amplitudes = Abs[Take[filteredFourier, posCount]];
+
+                        (* ПРАВИЛЬНЫЙ TRANSPOSE *)
+                        result = Transpose[{{freqsPos, amplitudes}}];
+                        result
+                    ";
+
+                    _Link.Evaluate(signalCode);
+                    _Link.WaitForAnswer();
+                    _Link.NewPacket();
+
+                    _Link.Evaluate("result");
+                    _Link.WaitForAnswer();
+                    var result = (double[,])_Link.GetArray(typeof(double), 2);
+                    _Link.NewPacket();
+
+                    var points = Enumerable.Range(0, result.GetLength(0))
+                        .Select(i => new FourierModel
+                        {
+                            _Frequency = result[i, 0],
+                            _Amplitude = result[i, 1]
+                        }).ToList();
+
+                    Application.Current.Dispatcher.Invoke(() => { FourierDataHandled?.Invoke(this, points); });
+                }
+                catch (Exception ex)
                 {
-                    _Frequency = data[i, 0],
-                    _Amplitude = data[i, 1],
-                }).ToList();
-        }
+                    _Link?.NewPacket();
 
-        private List<SignalModel> HandleRestoredData(double[,] data)
-        {
-            return Enumerable
-                .Range(0, data.GetLength(0))
-                .Select(i => new SignalModel
-                {
-                    _X = data[i, 0],
-                    _T = data[i, 1],
-                }).ToList();
-        }
-
-        private void SendSetRequest(string request)
-        {
+                }
+            });
 
         }
-
-        private void SendGetRequest(string request, out object response)
-        {
-            response = null;
-        }
-        public Task SpectrumAsync()
-        {
-            throw new NotImplementedException();
-        }
-
         public void Dispose()
         {
             _Link?.Close();
