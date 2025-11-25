@@ -457,6 +457,7 @@ namespace Lab1.ViewModels
         private bool CanSelectKernelCommandExecute(object p) => true;
         private void OnSelectKernelCommandExecuted(object p)
         {
+            //App.Services.GetRequiredService<IDllWorkerService>().InitOcs();
             SelectKernel();
         }
         #endregion
@@ -525,7 +526,7 @@ namespace Lab1.ViewModels
         private async void SolveEquationAsync()
         {
             //await App.Services.GetRequiredService<IMathLink>().SolveEquationAsync(Equation,T0,Tmax,Dt);
-            await App.Services.GetRequiredService<IMathLink>().GetFourierWithFilterAsync(Equation, T0,Tmax,Dt,0,5);
+            await App.Services.GetRequiredService<IMathLink>().GetFourierWithFilterAsync(Equation, T0,Tmax,Dt,1,5);
             await App.Services.GetRequiredService<IMathLink>().GetReconstructedSignalAsync(T0,Tmax,Dt,1,5);
         }
 

@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <Folder Include="Core\Libs\" />
+    <Folder Include="Core\PInvoke\Новая папка\" />
     <Folder Include="OscDll\" />
   </ItemGroup>
 

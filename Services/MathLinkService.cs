@@ -62,8 +62,7 @@ namespace Lab1.Services
 
                 try
                 {
-                    string restoreCode = $@"
-                (* === Параметры === *)
+                string restoreCode = $@"
                 t0 = {t0.ToString(CultureInfo.InvariantCulture)};
                 tmax = {tmax.ToString(CultureInfo.InvariantCulture)};
                 dt = {dt.ToString(CultureInfo.InvariantCulture)};

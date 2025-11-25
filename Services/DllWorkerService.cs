@@ -1,4 +1,5 @@
 ﻿using Lab1.Core.Libs;
+using Lab1.Core.PInvoke;
 using Lab1.Services.Interface;
 using System;
 using System.IO;
@@ -80,7 +81,9 @@ namespace Lab1.Services
             var res = DllInvoke.CoInitialize(IntPtr.Zero);
 
             IntPtr pTypeLibUnk = IntPtr.Zero;
+
             int hr = DllInvoke.LoadTypeLibEx(tlbPath, REGKIND.REGKIND_NONE, out pTypeLibUnk);
+
             if (hr != 0 || pTypeLibUnk == IntPtr.Zero)
                 throw new COMException($"LoadTypeLibEx failed: 0x{hr:X8}", hr);
 
@@ -123,11 +126,13 @@ namespace Lab1.Services
                 if (clsid == Guid.Empty || iid == Guid.Empty)
                     throw new Exception($"Не найдено: {coclassName} или {interfaceName}");
 
-                // 4. Создаём COM-объект
                 IntPtr pDevice;
+
                 hr = CoCreateInstance(ref clsid, IntPtr.Zero, CLSCTX_ALL, ref iid, out pDevice);
                 if (hr != 0)
                     throw new COMException($"CoCreateInstance failed: 0x{hr:X8}", hr);
+
+                IOsc casted = (IOsc)Marshal.GetTypedObjectForIUnknown(pDevice, typeof(IOsc));
 
                 return;
             }
